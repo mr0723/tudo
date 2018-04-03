@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>插件</title>
+    <link rel="stylesheet" href="css/swiper.min.css">
+    <link rel="stylesheet" href="css/demo.css">
+</head>
+<body>
+<div class="swiper-container">
+    <div class="swiper-wrapper">
+        <div class="swiper-slide">Slide 1</div>
+        <div class="swiper-slide">Slide 2</div>
+        <div class="swiper-slide">Slide 3</div>
+        <div class="swiper-slide">Slide 4</div>
+        <div class="swiper-slide">Slide 5</div>
+        <div class="swiper-slide">Slide 6</div>
+        <div class="swiper-slide">Slide 7</div>
+    </div>
+    <!-- 如果需要分页器 -->
+    <div class="swiper-pagination"></div>
+    <!-- Add Arrows -->
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+</div>
+<div class="content">
+    <div class="cont">
+        <div class="project active">未完成</div>
+        <div class="done">已完成</div>
+    </div>
+    <div class="con">
+        <ul>
+            <li>
+            </li>
+        </ul>
+    </div>
+</div>
+<div class="add">添加+</div>
+<div class="mask">
+    <div class="inputarea">
+        <textarea id="text"></textarea>
+        <div class="submit">提交</div>
+        <div class="update">修改</div>
+        <div class="cancel">
+            x
+        </div>
+    </div>
+</div>
+</body>
+<script src="js/swiper.js"></script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script src="js/swiper.min.js"></script>
+<script src="js/jquery.transit.js"></script>
+<script src="js/iscroll.js"></script>
+<script>
+    var swiper = new Swiper('.swiper-container', {
+        pagination: {
+            el: '.swiper-pagination',
+        },
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        },
+    });
+
+    //滑动
+    var myScroll = new IScroll(".con",{
+        scrollbars: true,
+        mouseWheel: true,
+        // scrollbars: 'custom',
+        interactiveScrollbars:true
+    });
+
+    function getData() {
+        return localStorage.todo?JSON.parse(localStorage.todo):[];
+    }
+    function saveData(data) {
+        return localStorage.todo=JSON.stringify(data);
+    }
+    function render() {
+        let data=getData();
+        let str="";
+        data.forEach(function (val,index) {
+            if(state==="project"&&val.done===false){
+                str+="<li id="+index+"><p>"+val.content+"</p><time>"+parseTime(val.time)+"</time><span>*</span><div class='finish'>完成</div></li>";
+            }else if(state==="done"&&val.done===true){
+                str+="<li id="+index+"><p>"+val.content+"</p><time>"+parseTime(val.time)+"</time><span class="+(val.star?"active":"")+">*</span><div class='del'>删除</div></li>";
+            }
+        });
+        $(".con ul").html(str);
+        myScroll.refresh();
+        addTouchEvent();
+    }
+    render();
+
+    var state="project";
+    //点击新增
+    $(".add").click(function () {
+        $(".mask").show();
+        $(".update").hide();
+        $(".submit").submit();
+        $(".inputarea").transition({y:0},500);
+    });
+    $(".cancel").click(function () {
+        $(".inputarea").transition({y:"-62vh"},500,function () {
+            $(".mask").hide();
+        });
+    });
+    $(".project").click(function (){
+        $(".project").addClass("active").siblings().removeClass("active");
+        state='project';
+        render();
+    });
+    $(".done").click(function (){
+        $(".done").addClass("active").siblings().removeClass("active");
+        state='done';
+        render();
+    });
+
+    $(".con ul")
+        .on("click",".finish",function () {
+        let index=$(this).parent().attr("id");
+        let data=getData();
+        data[index].done=true;
+        saveData(data);
+        render();
+    })
+        .on("click",".del",function () {
+            let index=$(this).parent().attr("id");
+            let data=getData();
+            data.splice(index,1);
+            saveData(data);
+            render();
+        })
+        .on("click","span",function () {
+            let index=$(this).parent().attr("id");
+            let data=getData();
+            data[index].star=!data[index].star;
+            saveData(data);
+            render();
+        })
+        .on("click","p",function (){
+            let index=$(this).parent().attr("id");
+            let data=getData();
+            $(".mask").show();
+            $(".inputarea").transition({y:0},500);
+            $("#text").val(data[index].content);
+            $(".update").show().data("index",index);
+            $(".submit").hide();
+        });
+
+    $(".update").click(function () {
+        let val=$("#text").val();
+        if(val===""){
+            return;
+        }
+        $("#text").val("");
+        let data=getData();
+        var index=$(this).data("index");
+        data[index].content=val;
+        saveData(data);
+        $(".inputarea").transition({y:"-62vh"},500,function () {
+            $(".mask").hide();
+            render();
+        });
+    });
+    $(".submit").click(function () {
+        let val=$("#text").val();
+        if(val===""){
+            return;
+        }
+        $("#text").val("");
+        let data=getData();
+        let time=new Date().getTime();
+        data.push({content:val,time,star:false,done:false});
+        saveData(data);
+        $(".inputarea").transition({y:"-62vh"},500,function () {
+            $(".mask").hide();
+            render();
+        });
+    });
+
+
+    function parseTime(time) {
+        var date=new Date();
+        date.setTime(time);
+        var year=date.getFullYear();
+        var month=setZero(date.getMonth()+1);
+        var day=setZero(date.getDate());
+        var hours=setZero(date.getHours());
+        var minute=setZero(date.getMinutes());
+        var second=setZero(date.getSeconds());
+        return year+""/+month+"/"+day+"<br>"+hours+":"+minute+":"+second;
+    }
+    function setZero(n) {
+        return n<10?"0"+n:n;
+    }
+
+    function addTouchEvent() {
+    let lis=document.querySelectorAll(".con ul li");
+    lis.forEach(function (ele,index) {
+        let sx,movex;
+        let max=window.innerWidth/5;
+        let state="start";
+        let flag=true;//手指离开需不需要有动画
+        ele.ontouchstart=function (e) {
+            ele.style.transition="";
+            sx=e.changedTouches[0].clientX;
+        };
+        ele.ontouchmove=function (e) {
+            let cx=e.changedTouches[0].clientX;
+            movex=cx-sx;
+            if(movex>0&&state==="start"){
+                flag=false;
+                return;
+            }
+            if(movex<0&&state==="end"){
+                flag=false;
+                return;
+            }
+            if(Math.abs(movex)>max){
+                flag=false;
+                state=state==="start"?"end":"start";
+                return;
+            }
+            if(state==="end"){
+                ele.style.transform=`translateX(${-max}px)`;
+            }else {
+                ele.style.transform=`translate(0px)`;
+            }
+            if(state==="end"){
+                movex=-max+cx-sx;
+            }
+            flag=true;
+            ele.style.transform=`translate(${movex}px)`;
+        };
+        ele.ontouchend=function (e) {
+            ele.style.transition=`all .5s`;
+            if(Math.abs(movex)>max/2){
+                if(!flag){return;}
+                ele.style.transform=`translateX(${-max}px)`;
+                state="end";
+            }else{
+                ele.style.transform=`translate(0px)`;
+                state="start";
+            }
+        }
+    });
+    }
+</script>
+</html>
